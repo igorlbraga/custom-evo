@@ -1467,10 +1467,6 @@ export class BaileysStartupService extends ChannelStartupService {
           this.logger.verbose(messageRaw);
 
           sendTelemetry(`received.message.${messageRaw.messageType ?? 'unknown'}`);
-          if (messageRaw.key.remoteJid?.includes('@lid') && messageRaw.key.remoteJidAlt) {
-            messageRaw.key.remoteJid = messageRaw.key.remoteJidAlt;
-          }
-          console.log(messageRaw);
 
           this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
 
@@ -4645,8 +4641,18 @@ export class BaileysStartupService extends ChannelStartupService {
     const contentType = getContentType(message.message);
     const contentMsg = message?.message[contentType] as any;
 
+    const messageKey = message.key as any;
+
+    const extractPhone = (s: string | undefined) => (s?.includes('@s.whatsapp') ? s?.split('@s.whatsapp')[0] : null);
+
+    const phone =
+      extractPhone(messageKey.remoteJid) ||
+      extractPhone(messageKey.remoteJidAlt) ||
+      extractPhone(messageKey.participant) ||
+      extractPhone(messageKey.participantAlt);
+
     const messageRaw = {
-      key: message.key, // Save key exactly as it comes from Baileys
+      key: { ...message.key, phone }, // Save key exactly as it comes from Baileys
       pushName:
         message.pushName ||
         (message.key.fromMe
